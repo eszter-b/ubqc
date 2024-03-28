@@ -87,8 +87,6 @@ class ClientProgram(Program):
 
             csocket.send_float(delta)
             csocket.send("delta sent")
-            #msg_delta = yield from csocket.recv()
-            #assert msg_delta == "delta arrived"
 
             # Proceed if the qubit is measured at Bob
             msg_measurement = yield from csocket.recv()
