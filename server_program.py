@@ -56,7 +56,10 @@ class ServerProgram(Program):
         # Step 3: Measure and compute
         for q, i in zip(brickwork, range(len(brickwork))):
             # listen on csocket, progress if delta received
-            delta = yield from csocket.recv_float() 
+            delta = yield from csocket.recv_float()
+            msg = yield from csocket.recv()
+            assert msg == "delta sent"
+            #csocket.send("delta arrived")
             print(f"delta[{i}] at Bob: {delta}")
             E = G.edges(i+1)
 
@@ -70,8 +73,9 @@ class ServerProgram(Program):
             #conn.insert_breakpoint(BreakpointAction.DUMP_LOCAL_STATE)
             m = q.measure(store_array=False)
             yield from conn.flush(block=False, callback="conn yielded")
+            csocket.send("qubit measured")
             measurement.append(int(m))
-            print(f"m[{i}] at Bob: {measurement[i]}")
+            print(f"measurement[{i}] at Bob: {measurement[i]}")
 
             csocket.send_int(measurement[i])
 

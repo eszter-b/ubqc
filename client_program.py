@@ -86,13 +86,18 @@ class ClientProgram(Program):
             print(f"delta[{i}] at Alice: {delta}")
 
             csocket.send_float(delta)
-            if not csocket.recv_callback("conn yielded"):
-                sleep(2)
+            csocket.send("delta sent")
+            #msg_delta = yield from csocket.recv()
+            #assert msg_delta == "delta arrived"
+
+            # Proceed if the qubit is measured at Bob
+            msg_measurement = yield from csocket.recv()
+            assert msg_measurement == "qubit measured"
+
             m = yield from csocket.recv_int()
             mesurement.append(int(m))
             print(f"mesurement[{i}] at Alice: {mesurement[i]}")
             
         print(f"number of qubits sent: {len(p)}")
-        print(f"qubits sent: {p}")
 
         return p
