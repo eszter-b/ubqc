@@ -11,7 +11,7 @@ from squidasm.sim.stack.common import LogManager
 from client_program import ClientProgram
 from server_program import ServerProgram
 
-# Example Blind Quantum Computation application.
+# Run Universal Blind Quantum Computation application.
 PI = math.pi
 PI_OVER_2 = math.pi / 2
 

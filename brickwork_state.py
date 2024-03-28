@@ -2,7 +2,6 @@ import networkx as nx
 import numpy as np
 import matplotlib.pyplot as plt
 
-
     
 def brickwork_graph(n, m):
     if (m % 8 == 5):
@@ -53,7 +52,7 @@ if __name__ == "__main__":
     G = nx.Graph()
     G = brickwork_graph(n, m)
     #test_edges(G, m)
-    pos = nx.get_node_attributes(G, 'pos')
-    nx.draw(G, pos, with_labels = True)
+    #pos = nx.get_node_attributes(G, 'pos')
+    #nx.draw(G, pos, with_labels = True)
 
-    plt.savefig("graph.png")
+    #plt.savefig("graph.png")

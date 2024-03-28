@@ -59,13 +59,11 @@ class ServerProgram(Program):
             delta = yield from csocket.recv_float() 
             print(f"delta[{i}] at Bob: {delta}")
             E = G.edges(i+1)
-            print(f"edge: {E} i: {i}")
 
             # Prepare brickwork state from received qubits
             for edge in E:
                 k, l = edge
                 brickwork[k-1].cphase(brickwork[l-1])
-                print(f"CZ on ({k-1}, {l-1})")
 
             q.rot_Z(angle=delta)
             q.H()

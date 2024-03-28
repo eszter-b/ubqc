@@ -2,7 +2,6 @@ qdevice_cfg: &qdevice_cfg
   num_qubits: 94
   num_comm_qubits: 94
 
-  
   # initialization error of the electron spin
   electron_init_depolar_prob: 0.05
 

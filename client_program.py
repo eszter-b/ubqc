@@ -92,7 +92,6 @@ class ClientProgram(Program):
             mesurement.append(int(m))
             print(f"mesurement[{i}] at Alice: {mesurement[i]}")
             
-
         print(f"number of qubits sent: {len(p)}")
         print(f"qubits sent: {p}")
 
