@@ -10,17 +10,18 @@ def brickwork_graph(n, m):
         matrix = np.empty([n,m], dtype=int)
         cntr = 1
 
-        for i in range(n):
-            for j in range(m):
+        for j in range(m):
+            for i in range(n):
                 matrix[i][j]=cntr
                 cntr += 1
 
         for i in range(n):
-            for j in range(m-1):
+            for j in range(m):
                 k = matrix[i][j]
-                G.add_node(k, subset=i, pos=(j,n-i))
-                G.add_node(k+1, subset=i, pos=(j+1,n-i))
-                G.add_edge(matrix[i][j], matrix[i][j+1])
+                G.add_node(k, pos=(j,n-i))
+
+                if j < m-1:
+                    G.add_edge(matrix[i][j], matrix[i][j+1])
                 
                 if (j <= m-2) and (i < n-1):
                     if (j % 8 == 3) and (i % 2 == 0):
@@ -46,13 +47,13 @@ def test_edges(G: nx.Graph, m):
 
 if __name__ == "__main__":
 
-    n = 3
+    n = 4
     m = 1*8+5
 
     G = nx.Graph()
     G = brickwork_graph(n, m)
     #test_edges(G, m)
-    #pos = nx.get_node_attributes(G, 'pos')
-    #nx.draw(G, pos, with_labels = True)
+    pos = nx.get_node_attributes(G, 'pos')
+    nx.draw(G, pos, with_labels = True)
 
-    #plt.savefig("graph.png")
+    plt.savefig("graph.png")
