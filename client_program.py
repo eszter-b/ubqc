@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import math
 from typing import Any, Dict, Generator
-from time import sleep
 
 from pydynaa import EventExpression
 from squidasm.sim.stack.csocket import ClassicalSocket
@@ -32,7 +31,6 @@ class ClientProgram(Program):
         self._dummy = dummy
         self._theta = theta
         self._r = r
-        self.use_callbacks = True
 
     @property
     def meta(self) -> ProgramMeta:
@@ -56,23 +54,22 @@ class ClientProgram(Program):
         csocket.send_int(self._wires)
         epr = epr_socket.create_keep(num_qubits)
         p = []
-        theta = self._theta
 
         # Remote state preparation
-        for q, i in zip(epr, range(num_qubits)):
+        for q, i in zip(epr, range(num_qubits-1, -1, -1)):
             if not (self._trap and self._dummy == i+1):
                 q.rot_Z(angle=self._theta[i])
                 q.H()
             m = q.measure()
-            yield from conn.flush()
-            p.append(int(m))
-        
+            p.append(m)
+        yield from conn.flush()
+        p = [int(i) for i in p]
         print(f"p: {p}")
 
         mesurement = []
 
         # Step 2: Alice sends values of delta_i
-        for i in range(0, len(theta)):
+        for i in range(len(self._theta)):
             if self._trap and self._dummy == i+1:
                 delta = -self._theta[i] + (p[i] + self._r[i]) * PI
             elif i == 0:
@@ -97,5 +94,6 @@ class ClientProgram(Program):
             print(f"mesurement[{i}] at Alice: {mesurement[i]}")
             
         print(f"number of qubits sent: {len(p)}")
+        print(f"tagged state: |{mesurement[-2]}{mesurement[-1]}>")
 
         return p

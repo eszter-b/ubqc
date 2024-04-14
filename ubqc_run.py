@@ -23,9 +23,9 @@ if __name__ == "__main__":
     cfg_file = os.path.join(os.path.dirname(__file__), "config_nv.yaml")
     cfg = StackNetworkConfig.from_file(cfg_file)
 
-    phi = [PI/4, PI/4, PI/4, 0, 0]
-    theta = [0, 0, 0, 0, 0]
-    r = [0, 0, 0, 0, 0]
+    phi = [-PI_OVER_2, 0.0, PI_OVER_2, PI_OVER_2]
+    theta = [0, 0, 0, 0]
+    r = [0, 0, 0, 0]
     #phi = [PI/4, PI/4, PI/4, 0, 0, 0, 0, 0, 0, 0]
     #theta = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
     #r = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
@@ -36,7 +36,7 @@ if __name__ == "__main__":
         I gate: phi0 = 0       phi1 = 0        phi2 = 0
     """
 
-    alice_program = ClientProgram(depth=5, wires=1, phi=phi, trap=False, dummy=0, theta=theta, r=r)
+    alice_program = ClientProgram(depth=2, wires=2, phi=phi, trap=False, dummy=0, theta=theta, r=r)
     bob_program = ServerProgram()
     run(config=cfg, programs={"client": alice_program, "server": bob_program}, num_times=1)
 
