@@ -6,10 +6,10 @@ from typing import Any, Dict, Generator
 from pydynaa import EventExpression
 from squidasm.sim.stack.csocket import ClassicalSocket
 from squidasm.sim.stack.program import Program, ProgramContext, ProgramMeta
+from squidasm.util.routines import remote_state_preparation
 
 
 PI = math.pi
-PI_OVER_2 = math.pi / 2
 
 class ClientProgram(Program):
     PEER = "server"
@@ -52,35 +52,35 @@ class ClientProgram(Program):
         num_qubits = self._depth*self._wires
         csocket.send_int(self._depth)
         csocket.send_int(self._wires)
-        epr = epr_socket.create_keep(num_qubits)
         p = []
 
         # Remote state preparation
-        for q, i in zip(epr, range(num_qubits-1, -1, -1)):
+        for i in range(num_qubits):
             if not (self._trap and self._dummy == i+1):
-                q.rot_Z(angle=self._theta[i])
-                q.H()
-            m = q.measure()
-            p.append(m)
+                p.append(remote_state_preparation(epr_socket, self._theta[i]))
+
         yield from conn.flush()
         p = [int(i) for i in p]
+        reversed(p)
         print(f"p: {p}")
 
         mesurement = []
-
+        msg = yield from csocket.recv()
+        assert msg == "brickwork state created"
+        
         # Step 2: Alice sends values of delta_i
         for i in range(len(self._theta)):
             if self._trap and self._dummy == i+1:
                 delta = -self._theta[i] + (p[i] + self._r[i]) * PI
             elif i == 0:
-                delta = self._theta[i] - self._phi[i] + self._r[i] * PI
+                delta = -self._theta[i] + self._phi[i] + self._r[i] * PI
             else:
                 delta = (
                     math.pow(-1, (mesurement[i-1] + self._r[i-1])) * self._phi[i]
                     - self._theta[i]
                     + (p[i] + self._r[i]) * PI
                 )
-            print(f"delta[{i}] at Alice: {delta}")
+            #print(f"delta[{i}] at Alice: {delta}")
 
             csocket.send_float(delta)
             csocket.send("delta sent")
@@ -91,7 +91,7 @@ class ClientProgram(Program):
 
             m = yield from csocket.recv_int()
             mesurement.append(int(m))
-            print(f"mesurement[{i}] at Alice: {mesurement[i]}")
+            #print(f"mesurement[{i}] at Alice: {mesurement[i]}")
             
         print(f"number of qubits sent: {len(p)}")
         print(f"tagged state: |{mesurement[-2]}{mesurement[-1]}>")
