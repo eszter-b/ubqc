@@ -1,6 +1,6 @@
 qdevice_cfg: &qdevice_cfg
-  num_qubits: 5
-  num_comm_qubits: 5
+  num_qubits: 8
+  num_comm_qubits: 8
   T1: 1.e+12
   T2: 1.e+12
   init_time: 1.e+1
