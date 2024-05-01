@@ -1,5 +1,5 @@
 ## Application
-Executes Grover's search algorithm using universal blind quantum computing based on the works of [Broadbent et al][1] and of [Gustiani and DiVincenzo][2].
+Executes Grover's search algorithm using universal blind quantum computation based on the works of [Broadbent et al][1] and of [Gustiani and DiVincenzo][2].
 
 ## Current state:
 Runs a two qubit search on a fixed graph state.
