@@ -3,14 +3,16 @@ from __future__ import annotations
 from typing import Any, Dict, Generator
 
 from netqasm.sdk.qubit import Qubit
-from netqasm.lang.ir import BreakpointAction
+
+from netsquid.qubits.dmutil import dm_fidelity
+from netsquid.qubits import ketstates, ketutil
 
 from pydynaa import EventExpression
 from squidasm.sim.stack.csocket import ClassicalSocket
 from squidasm.sim.stack.program import Program, ProgramContext, ProgramMeta
 from squidasm.util.routines import recv_remote_state_preparation
+from squidasm.util import get_qubit_state
 
-from brickwork_state import brickwork_graph
 
 
 class ServerProgram(Program):
@@ -42,9 +44,9 @@ class ServerProgram(Program):
             wires = depth
             depth = temp
 
-        #G = brickwork_graph(wires, depth)
-        brickwork = []
+        brickwork = [Qubit]
         measurement = []
+        fidelity = []
 
         # Receive EPR Pairs
         for i in range(num_qubits):
@@ -54,46 +56,53 @@ class ServerProgram(Program):
         brickwork.reverse()
         
         # Prepare brickwork state from received qubits
-        brickwork[7].cphase(brickwork[6])
-        brickwork[7].cphase(brickwork[5])
-        brickwork[6].cphase(brickwork[4])
-        brickwork[5].cphase(brickwork[3])
-        brickwork[4].cphase(brickwork[2])
-        brickwork[3].cphase(brickwork[1])
-        brickwork[2].cphase(brickwork[0])
-        brickwork[1].cphase(brickwork[0])
+        brickwork[0].cphase(brickwork[1])
+        brickwork[1].cphase(brickwork[3])
+        brickwork[0].cphase(brickwork[2])
+        brickwork[2].cphase(brickwork[4])
+        brickwork[3].cphase(brickwork[5])
+        brickwork[5].cphase(brickwork[7])
+        brickwork[4].cphase(brickwork[6])
+        brickwork[6].cphase(brickwork[7])
+
         """
         for edge in G.edges:
             k, l = edge
             brickwork[k-1].cphase(brickwork[l-1])
         """
         yield from conn.flush()
-       
-        #print(f"number of received qubits: {len(brickwork)}")
-        #print(f"number of qubits expected: {num_qubits}")
 
-        csocket.send("brickwork state created")
 
         # Step 3: Measure and compute
-        for i in range(len(brickwork)):
+        for i in range(num_qubits):
             # listen on csocket, progress if delta received
             delta = yield from csocket.recv_float()
             msg = yield from csocket.recv()
             assert msg == "delta sent"
-            #print(f"delta[{i}] at Bob: {delta}")
-
+            csocket.send("delta recieved")
+            
             brickwork[i].rot_Z(angle=delta)
             brickwork[i].H()
-            conn.insert_breakpoint(BreakpointAction.DUMP_LOCAL_STATE)
-            m = brickwork[i].measure(store_array=False)
+
+            #if i >= num_qubits-2:
+            yield from conn.flush()
+            msg = yield from csocket.recv()
+            assert msg == "ping"
+
+            epr_server = get_qubit_state(brickwork[i], "server")
+            fidelity.append(float(
+                dm_fidelity(epr_server, ketutil.reduced_dm(ketstates.b00, [0]))
+            ))
+            csocket.send("pong")
+
+            m = brickwork[i].measure(inplace=True)
             yield from conn.flush()
             csocket.send("qubit measured")
             measurement.append(int(m))
-            #print(f"measurement[{i}] at Bob: {measurement[i]}")
 
             csocket.send_int(measurement[i])
 
-            
+        print(f"fidelity: {fidelity}") 
         print(f"number of measured qubits: {len(measurement)}")
         print(f"measurement results: {measurement}")
 
