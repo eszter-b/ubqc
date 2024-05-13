@@ -18,14 +18,14 @@ PI_OVER_2 = math.pi / 2
 
 if __name__ == "__main__":
     LogManager.set_log_level("WARNING")
-    ns.set_qstate_formalism(ns.qubits.qformalism.QFormalism.DM)
+    ns.set_qstate_formalism(ns.qubits.qformalism.QFormalism.KET)
 
     cfg_file = os.path.join(os.path.dirname(__file__), "config_nv.yaml")
     cfg = StackNetworkConfig.from_file(cfg_file)
 
     phi = [0.0, 0.0, PI, PI, 0.0, 0.0, PI, PI]  # |00> tagged
-    theta = [PI, 0, PI_OVER_2, 0, 0, PI_OVER_2, 0, 0]
-    r = [0, 0, 1, 0, 0, 1, 0, 0]
+    theta = [0, 0, 0, 0, 0, 0, 0, 0]
+    r = [0, 0, 0, 0, 0, 0, 0, 0]
     #phi = [PI/4, PI/4, PI/4, 0, 0, 0, 0, 0, 0, 0]
     #theta = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
     #r = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
