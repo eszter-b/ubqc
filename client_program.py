@@ -8,6 +8,8 @@ from squidasm.sim.stack.csocket import ClassicalSocket
 from squidasm.sim.stack.program import Program, ProgramContext, ProgramMeta
 from squidasm.util.routines import remote_state_preparation
 
+from brickwork_state import fixed_graph_2_bit
+
 
 PI = math.pi
 
@@ -58,42 +60,84 @@ class ClientProgram(Program):
         for i in range(num_qubits):
             if not (self._trap and self._dummy == i+1):
                 p.append(remote_state_preparation(epr_socket, self._theta[i]))
+            else:
+                p.append(remote_state_preparation(epr_socket, 0))
 
         yield from conn.flush()
         p = [int(i) for i in p]
         reversed(p)
         print(f"p: {p}")
 
-        mesurement = []
-        msg = yield from csocket.recv()
-        assert msg == "brickwork state created"
-        
+        s = []
+        G = fixed_graph_2_bit()
+        wire_0 = []
+        wire_1 = []
+        for i in range(7):
+            wire = G.nodes[i]['pos']
+            x, y = wire
+            E = G.edges(i)
+            for edge in E:
+                k, l = edge
+                int(k)
+                int(l)
+                if y==0:
+                    wire_0.append(k)
+                    wire_1.append(0)
+                else:
+                    wire_1.append(k)
+                    wire_0.append(0)
+
         # Step 2: Alice sends values of delta_i
-        for i in range(len(self._theta)):
+        for i in range(num_qubits):
+            wire = G.nodes[i]['pos']
+            x, y = wire
+            j = 0
+            #print(E)
             if self._trap and self._dummy == i+1:
                 delta = -self._theta[i] + (p[i] + self._r[i]) * PI
-            elif i == 0:
-                delta = -self._theta[i] + self._phi[i] + self._r[i] * PI
-            else:
+            elif i == 0 or i == 1:
+                delta = self._theta[i] + self._phi[i] + self._r[i] * PI
+            elif i == 2 or i == 3:
+                if y == 0:
+                    j = wire_0[i]
+                else:
+                    j = wire_1[i]
                 delta = (
-                    math.pow(-1, (mesurement[i-1] + self._r[i-1])) * self._phi[i]
-                    - self._theta[i]
-                    + (p[i] + self._r[i]) * PI
+                    math.pow(-1, (s[j])) * self._phi[i]
+                    + self._theta[i]
+                    + self._r[i] * PI
                 )
-            #print(f"delta[{i}] at Alice: {delta}")
+            else:
+                if y == 0:
+                    j = wire_0[i-2]
+                    x = wire_0[i-3]
+                else:
+                    j = wire_1[i]
+                    x = wire_1[i-3]
+                delta = (
+                    math.pow(-1, (s[j])) * self._phi[i]
+                    + self._theta[i]
+                    + (s[x] + self._r[i]) * PI
+                )
 
             csocket.send_float(delta)
             csocket.send("delta sent")
+            msg = yield from csocket.recv()
+            assert msg == "delta recieved"
+
+            # Wait for fidelity measurement at Bob
+            csocket.send("ping")
+            msg = yield from csocket.recv()
+            assert msg == "pong"
 
             # Proceed if the qubit is measured at Bob
-            msg_measurement = yield from csocket.recv()
-            assert msg_measurement == "qubit measured"
+            msg = yield from csocket.recv()
+            assert msg == "qubit measured"
 
             m = yield from csocket.recv_int()
-            mesurement.append(int(m))
-            #print(f"mesurement[{i}] at Alice: {mesurement[i]}")
+            s.append(int(m))
             
         print(f"number of qubits sent: {len(p)}")
-        print(f"tagged state: |{mesurement[-2]}{mesurement[-1]}>")
+        print(f"tagged state: |{s[-2]}{s[-1]}>")
 
         return p
