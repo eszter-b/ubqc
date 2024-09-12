@@ -55,9 +55,6 @@ class ServerProgram(Program):
             else:
                 brickwork.append(recv_remote_state_preparation(epr_socket))
         
-        # reverse to match the qubit_id to place in list
-        yield from conn.flush()
-        brickwork.reverse()
         yield from conn.flush()
 
         # Prepare brickwork state from received qubits
@@ -91,16 +88,15 @@ class ServerProgram(Program):
             brickwork[i].rot_Z(angle=delta)
             brickwork[i].H()
 
-            if i >= num_qubits-2:
-                yield from conn.flush()
-                msg = yield from csocket.recv()
-                assert msg == "ping"
+            yield from conn.flush()
+            msg = yield from csocket.recv()
+            assert msg == "ping"
 
-                epr_server = get_qubit_state(brickwork[i], "server")
-                fidelity.append(float(
-                    dm_fidelity(epr_server, ketutil.reduced_dm(ketstates.b00, [0]))
-                ))
-                csocket.send("pong")
+            epr_server = get_qubit_state(brickwork[i], "server")
+            fidelity.append(float(
+                dm_fidelity(epr_server, ketutil.reduced_dm(ketstates.b00, [0]))
+            ))
+            csocket.send("pong")
 
             m = brickwork[i].measure()
             yield from conn.flush()
@@ -109,9 +105,5 @@ class ServerProgram(Program):
 
             csocket.send_int(measurement[i])
 
-        #print(f"fidelity: {fidelity}") 
-        #print(f"number of measured qubits: {len(measurement)}")
-        #print("m: ", measurement)
-
-        return {"measurement": measurement, "m7": measurement[6], "m8": measurement[7], "f7": fidelity[0], "f8": fidelity[1]}
+        return {"measurement": measurement, "m7": measurement[6], "m8": measurement[7], "fidelity": fidelity}
             
