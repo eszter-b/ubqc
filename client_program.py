@@ -65,8 +65,6 @@ class ClientProgram(Program):
 
         yield from conn.flush()
         p = [int(i) for i in p]
-        reversed(p)
-        #print(f"p: {p}")
 
         s = []
         G = fixed_graph_2_bit()
@@ -92,27 +90,28 @@ class ClientProgram(Program):
             wire = G.nodes[i]['pos']
             x, y = wire
             j = 0
-            #print(E)
-            if self._trap and self._dummy == i+1:
-                delta = -self._theta[i] + (p[i] + self._r[i]) * PI
-            elif i == 0 or i == 1:
-                delta = self._theta[i] + self._phi[i] + (self._r[i]) * PI
-            elif i == 2 or i == 3:
-                if y == 0:
-                    j = wire_0[i]
-                else:
-                    j = wire_1[i]
-                phi_prime = math.pow(-1, s[j])*self._phi[i]
-                delta = phi_prime + self._theta[i] + self._r[i]*PI
-            else:
-                if y == 0:
-                    j = wire_0[i-2]
-                    x = wire_0[i-3]
-                else:
-                    j = wire_1[i]
-                    x = wire_1[i-3]
-                phi_prime = math.pow(-1, s[j])*self._phi[i] + s[x]*PI
-                delta = phi_prime + self._theta[i] + self._r[i]*PI
+            p_r = p[i] + self._r[i]
+
+            delta = -self._theta[i] + p_r*PI
+            phi_prime = self._phi[i]
+
+            if not (self._trap and self._dummy == i+1):
+                if i == 2 or i == 3:
+                    if y == 0:
+                        j = wire_0[i]
+                    else:
+                        j = wire_1[i]
+                    phi_prime = math.pow(-1, s[j])*self._phi[i]
+                elif i > 3:
+                    if y == 0:
+                        j = wire_0[i-2]
+                        x = wire_0[i-3]
+                    else:
+                        j = wire_1[i]
+                        x = wire_1[i-3]
+                    phi_prime = math.pow(-1, s[j])*self._phi[i] + s[x]*PI
+
+                delta = phi_prime - self._theta[i] + p_r*PI
 
             csocket.send_float(delta)
             csocket.send("delta sent")
@@ -120,21 +119,15 @@ class ClientProgram(Program):
             assert msg == "delta recieved"
 
             # Wait for fidelity measurement at Bob
-            if i >= num_qubits-2:
-                csocket.send("ping")
-                msg = yield from csocket.recv()
-                assert msg == "pong"
+            csocket.send("ping")
+            msg = yield from csocket.recv()
+            assert msg == "pong"
 
             # Proceed if the qubit is measured at Bob and apply correction to measurement
             msg = yield from csocket.recv()
             assert msg == "qubit measured"
-
             m = yield from csocket.recv_int()
             s.append(abs(int(m)-self._r[i]))
-            
-        #print(f"number of qubits sent: {len(p)}")
-        #print("r: ", self._r)
-        #print("p: ", p)
-        #print("s: ", s)
 
-        return p
+        return {"p": p}
+    
