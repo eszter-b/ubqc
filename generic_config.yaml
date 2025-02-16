@@ -1,6 +1,6 @@
 # Configuration with perfect link, a generic qdevice, but some noise on the generic device
 qdevice_cfg: &qdevice_cfg
-  num_qubits: 8
+  num_qubits: 10
 
   # coherence times in ns(same for each qubit) min requirement
   T1: 10_000_000_000_000_000

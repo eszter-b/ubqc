@@ -38,17 +38,19 @@ def brickwork_graph(n, m):
         return -1
 
 def fixed_graph_2_bit():
-    G = nx.DiGraph()
-    G.add_node(0, pos=(0, 0))
-    G.add_node(1, pos=(0, 1))
-    G.add_node(2, pos=(1, 1))
-    G.add_node(3, pos=(1, 0))
-    G.add_node(4, pos=(2, 0))
-    G.add_node(5, pos=(2, 1))
-    G.add_node(6, pos=(3, 1))
-    G.add_node(7, pos=(3, 0))
+    G = nx.Graph()
+    G.add_node(0, pos=(0, 0), n="0", w="1")
+    G.add_node(1, pos=(0, 1), n="1", w="0")
+    G.add_node(2, pos=(1, 1), n="2", w="0")
+    G.add_node(3, pos=(1, 0), n="3", w="1")
+    G.add_node(4, pos=(2, 1), n="4", w="0")
+    G.add_node(5, pos=(2, 0), n="5", w="1")
+    G.add_node(6, pos=(3, 1), n="6", w="0")
+    G.add_node(7, pos=(3, 0), n="7", w="1")
+    G.add_node(8, pos=(4, 0), n="8", w="1")
+    G.add_node(9, pos=(4, 1), n="9", w="0")
 
-    G.add_edges_from([(0, 1), (0, 3), (1, 2), (2, 5), (3, 4), (4, 7), (5 ,6), (6, 7)])
+    G.add_edges_from([(0,3), (1,2), (2,3), (2,4), (3,5), (4,6), (5,7), (6,9), (7,8), (8,9)])
 
     return G
 
