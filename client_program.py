@@ -67,7 +67,7 @@ class ClientProgram(Program):
         # Remote state preparation
         for i in range(num_qubits):
             if not (self._trap and self._dummy == i + 1):
-                # q = epr_socket.create_keep()[0]
+                #q = epr_socket.create_keep()[0]
                 # q.Z()
                 # q.X()
                 # p.append(measXY(q, self._theta[i]))
@@ -77,14 +77,15 @@ class ClientProgram(Program):
 
         yield from conn.flush()
         p = [int(i) for i in p]
+        print(p)
         s = []
 
         # Step 2: Alice sends values of delta_i
         for i in range(num_qubits):
 
-            p_r = self._r[i] + p[i]
-            delta = -self._theta[i] + p_r * PI
+            p_r = self._r[i] ^ p[i]
             phi_prime = self._phi[i]
+            delta = phi_prime - self._theta[i] + p_r * PI
 
             if not (self._trap and self._dummy == i + 1):
 
@@ -92,14 +93,28 @@ class ClientProgram(Program):
                 s_dependency = [s for s in node['s']]
                 t_dependency = [t for t in node['t']]
                 if s_dependency != 0:
-                    x = sum([s[i] for i in s_dependency])
+                    x = sum([s[i] for i in s_dependency])%2
                     phi_prime *= math.pow(-1, x)
                 if t_dependency != 0:
-                    z = sum([s[i] for i in t_dependency])
+                    z = sum([s[i] for i in t_dependency])%2
                     phi_prime += z * PI
 
                 delta = phi_prime - self._theta[i] + p_r * PI
-
+                """
+                if i == 4:
+                    phi_prime = math.pow(-1, s[2])*self._phi[i] + s[1]*PI
+                elif i == 5:
+                    phi_prime = math.pow(-1, s[3])*self._phi[i] + s[0] * PI
+                elif i == 6:
+                    phi_prime = s[2] * PI
+                elif i == 7:
+                    phi_prime = s[3] * PI
+                elif i == 8:
+                    phi_prime = math.pow(-1, s[7])*self._phi[i] + s[5] * PI
+                elif i == 9:
+                    phi_prime = math.pow(-1, s[6])*self._phi[i] + s[4] * PI
+                delta = phi_prime - self._theta[i] + p_r * PI
+                """
             csocket.send_float(delta)
             csocket.send("delta sent")
             msg = yield from csocket.recv()

@@ -54,6 +54,29 @@ def fixed_graph_2_bit():
 
     return G
 
+def fixed_graph_small():
+    G = nx.Graph()
+    G.add_node(0, pos=(0, 0))
+    G.add_node(1, pos=(0, 1))
+    G.add_node(2, pos=(1, 1))
+    G.add_node(3, pos=(1, 0))
+    G.add_node(4, pos=(2, 0))
+    G.add_node(5, pos=(2, 1))
+    G.add_node(6, pos=(3, 1))
+    G.add_node(7, pos=(3, 0))
+
+    G.add_edges_from([(0, 1), (0, 3), (1, 2), (2, 5), (3, 4), (4, 7), (5 ,6), (6, 7)])
+
+    return G
+
+def triangular_cluster():
+    G = nx.Graph()
+    nodes = [0, 1, 2, 3]
+    edges = [(0,1), (1,2), (2,3), (0,2)]
+    G.add_nodes_from(nodes)
+    G.add_edges_from(edges)
+
+
 def test_edges(G: nx.Graph, m):
     for edge, node in zip(G.edges, G.nodes):
         i, j = edge

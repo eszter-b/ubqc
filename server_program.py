@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+from pyexpat.errors import messages
 from typing import Any, Dict, Generator
 
+import networkx
 from netqasm.sdk.qubit import Qubit
 
 from netsquid.qubits.dmutil import dm_fidelity
@@ -9,7 +11,7 @@ from netsquid.qubits import ketstates, ketutil
 
 from pydynaa import EventExpression
 
-from examples.advanced.ubqc.brickwork_state import fixed_graph_2_bit
+from examples.advanced.ubqc.brickwork_state import fixed_graph_2_bit, fixed_graph_small
 from squidasm.sim.stack.csocket import ClassicalSocket
 from squidasm.sim.stack.program import Program, ProgramContext, ProgramMeta
 from squidasm.util.routines import recv_remote_state_preparation
@@ -18,14 +20,22 @@ from squidasm.util import get_qubit_state
 
 class ServerProgram(Program):
     PEER = "client"
-
+    def __init__(
+            self,
+            corrections: dict,
+            outputs: set,
+            graph: networkx.Graph
+    ):
+        self._corrections = corrections
+        self._outputs = outputs
+        self._graph = graph
     @property
     def meta(self) -> ProgramMeta:
         return ProgramMeta(
             name="server_program",
             csockets=[self.PEER],
             epr_sockets=[self.PEER],
-            max_qubits=8,
+            max_qubits=10,
         )
 
     def run(
@@ -47,10 +57,7 @@ class ServerProgram(Program):
 
         brickwork = [Qubit]
         measurement = []
-        s_0 = []
-        s_1 = []
         fidelity = []
-        G = fixed_graph_2_bit()
 
         # Receive EPR Pairs
         for i in range(num_qubits):
@@ -59,10 +66,11 @@ class ServerProgram(Program):
             else:
                 brickwork.append(recv_remote_state_preparation(epr_socket))
 
+
         yield from conn.flush()
 
         # Prepare brickwork state from received qubits
-        for edge in G.edges:
+        for edge in self._graph.edges:
             k, l = edge
             brickwork[k].cphase(brickwork[l])
         yield from conn.flush()
@@ -88,34 +96,11 @@ class ServerProgram(Program):
                 dm_fidelity(epr_server, ketutil.reduced_dm(ketstates.b00, [0]))
             ))
             csocket.send("pong")
-            w = G.nodes[i]["w"]
-            """
-
-            if i >= 6:
-                sX = sum(s_0[:i])%2
-                sZ = sum(s_1[:i - 1])%2
-                if sX == 1:
-                    brickwork[i].X()
-                if sZ == 1:
-                    brickwork[i].Z()
-            if i > 0:
-                w_prev = G.nodes[i-1]["w"]
-                if w == w_prev:
-                    brickwork[i].X()
-                else:
-                    brickwork[i].Z()
-            """
 
             m = brickwork[i].measure()
             yield from conn.flush()
             csocket.send("qubit measured")
             measurement.append(int(m))
-            if w == "0":
-                s_0.append(int(m))
-            if w == "1":
-                s_1.append(int(m))
-
             csocket.send_int(measurement[i])
 
-        #print("m: ", measurement)
         return {"measurement": measurement, "m8": measurement[8], "m9": measurement[9], "fidelity": fidelity}

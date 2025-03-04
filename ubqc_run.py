@@ -9,6 +9,7 @@ from typing import List
 
 import netsquid as ns
 
+from examples.advanced.ubqc.brickwork_state import triangular_cluster
 from squidasm.run.stack.run import run
 from squidasm.sim.stack.common import LogManager
 from client_program import ClientProgram
@@ -34,13 +35,15 @@ def fail_rate(
     tagged_state: str,
     phi: list,
     dependency: dict,
+    correction: dict,
+    outputs: set,
     graph: Graph,
     theta: list = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     r: list = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
 ) -> None:
 
     alice_program = ClientProgram(depth=5, wires=2, phi=phi, trap=False, dummy=0, theta=theta, r=r, tagged_state=tagged_state, dependencies=dependency, graph=graph)
-    bob_program = ServerProgram()
+    bob_program = ServerProgram(corrections=correction, graph=graph, outputs=outputs)
     client_results, server_results = run(config=cfg, programs={"client": alice_program, "server": bob_program}, num_times=num_times)
 
     m8s = [result["m8"] for result in server_results]
@@ -148,22 +151,14 @@ def create_network(
 
 if __name__ == "__main__":
     LogManager.set_log_level("WARNING")
-    ns.set_qstate_formalism(ns.qubits.qformalism.QFormalism.KET)
+    ns.set_qstate_formalism(ns.qubits.qformalism.QFormalism.GSLC)
     config = "generic_config.yaml"
     #config = "config_nv.yaml"
     #config = "trapped_ion_config.yaml"
     cfg_file = os.path.join(os.path.dirname(__file__), config)
     cfg = StackNetworkConfig.from_file(cfg_file)
-    """
-    alice = cfg.stacks[0].qdevice_cfg
-    bob = cfg.stacks[1].qdevice_cfg
-    alice = GenericQDeviceConfig.perfect_config()
-    bob= GenericQDeviceConfig.perfect_config()
-    alice.num_qubits = 8
-    bob.num_qubits = 8
-    """
-    #cfg = create_network(node_names=["client", "server"])
-    num_times = 100
+
+    num_times = 1
 
     tagged_state = "00"
 
@@ -180,5 +175,5 @@ if __name__ == "__main__":
 
     dependency, correction = get_dependencies(G, phi, inputs, outputs)
 
-    fail_rate(cfg, num_times=num_times, tagged_state=tagged_state, phi=phi, dependency=dependency, graph=G)
+    fail_rate(cfg, num_times=num_times, tagged_state=tagged_state, phi=phi, dependency=dependency, correction=correction, graph=G, outputs=outputs)
 
