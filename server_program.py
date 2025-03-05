@@ -5,6 +5,7 @@ from typing import Any, Dict, Generator
 
 import networkx
 from netqasm.sdk.qubit import Qubit
+import numpy
 
 from netsquid.qubits.dmutil import dm_fidelity
 from netsquid.qubits import ketstates, ketutil
@@ -60,6 +61,7 @@ class ServerProgram(Program):
         fidelity = []
 
         # Receive EPR Pairs
+
         for i in range(num_qubits):
             if i == 0:
                 brickwork[0] = recv_remote_state_preparation(epr_socket)
@@ -83,7 +85,8 @@ class ServerProgram(Program):
             msg = yield from csocket.recv()
             assert msg == "delta sent"
             csocket.send("delta received")
-
+            #print("Bob: ", delta)
+            brickwork[i].H()
             brickwork[i].rot_Z(angle=delta)
             brickwork[i].H()
 
@@ -102,5 +105,7 @@ class ServerProgram(Program):
             csocket.send("qubit measured")
             measurement.append(int(m))
             csocket.send_int(measurement[i])
+        #print("Bob: ", measurement)
+        #print(fidelity)
 
         return {"measurement": measurement, "m8": measurement[8], "m9": measurement[9], "fidelity": fidelity}

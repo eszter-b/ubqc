@@ -158,11 +158,11 @@ if __name__ == "__main__":
     cfg_file = os.path.join(os.path.dirname(__file__), config)
     cfg = StackNetworkConfig.from_file(cfg_file)
 
-    num_times = 1
+    num_times = 100
 
     tagged_state = "00"
 
-    #phi = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]  # no calculation
+    #phi = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]  # no calculation
     phi = [0.0, 0.0, 0.0, 0.0, PI, PI, 0.0, 0.0, PI, PI]
     theta = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
     r = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]

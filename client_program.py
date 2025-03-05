@@ -77,7 +77,7 @@ class ClientProgram(Program):
 
         yield from conn.flush()
         p = [int(i) for i in p]
-        print(p)
+        #print("Alice: ", p)
         s = []
 
         # Step 2: Alice sends values of delta_i
