@@ -20,8 +20,7 @@ class ClientProgram(Program):
 
     def __init__(
             self,
-            depth: int,
-            wires: int,
+            num_qubits: int,
             phi: list,
             trap: bool,
             dummy: int,
@@ -29,10 +28,10 @@ class ClientProgram(Program):
             r: list,
             tagged_state: str,
             dependencies: dict,
-            graph: networkx.Graph
+            graph: networkx.Graph,
+            output: set
     ):
-        self._depth = depth
-        self._wires = wires
+        self._num_qubits = num_qubits
         self._phi = phi
         self._trap = trap
         self._dummy = dummy
@@ -41,6 +40,7 @@ class ClientProgram(Program):
         self._tagged_state = tagged_state
         self._dependencies = dependencies
         self._graph = graph
+        self._output = output
 
     @property
     def meta(self) -> ProgramMeta:
@@ -48,7 +48,7 @@ class ClientProgram(Program):
             name="client_program",
             csockets=[self.PEER],
             epr_sockets=[self.PEER],
-            max_qubits=self._depth * self._wires,
+            max_qubits=self._num_qubits,
         )
 
     def run(
@@ -59,33 +59,31 @@ class ClientProgram(Program):
         csocket: ClassicalSocket = context.csockets[self.PEER]
 
         # Step 1: Alice prepares and sends qubits to Bob
-        num_qubits = self._depth * self._wires
-        csocket.send_int(self._depth)
-        csocket.send_int(self._wires)
+        csocket.send_int(self._num_qubits)
         p = []
 
         # Remote state preparation
-        for i in range(num_qubits):
+        for i in range(self._num_qubits):
             if not (self._trap and self._dummy == i + 1):
-                #q = epr_socket.create_keep()[0]
-                # q.Z()
-                # q.X()
-                # p.append(measXY(q, self._theta[i]))
-                p.append(remote_state_preparation(epr_socket, self._theta[i]))
+                q = epr_socket.create_keep()[0]
+                q.H()
+                q.rot_Z(angle=self._theta[i])
+                q.H()
+                p.append(q.measure())
             else:
-                p.append(remote_state_preparation(epr_socket, 0))
+                q = epr_socket.create_keep()[0]
+                p.append(q.measure())
 
         yield from conn.flush()
         p = [int(i) for i in p]
-        #print("Alice: ", p)
+        p_r = [self._r[i] ^ p[i] for i in range(len(p))]
         s = []
 
         # Step 2: Alice sends values of delta_i
-        for i in range(num_qubits):
+        for i in range(self._num_qubits):
 
-            p_r = self._r[i] ^ p[i]
             phi_prime = self._phi[i]
-            delta = phi_prime - self._theta[i] + p_r * PI
+            delta = phi_prime - self._theta[i] + p_r[i] * PI
 
             if not (self._trap and self._dummy == i + 1):
 
@@ -99,22 +97,23 @@ class ClientProgram(Program):
                     z = sum([s[i] for i in t_dependency])%2
                     phi_prime += z * PI
 
-                delta = phi_prime - self._theta[i] + p_r * PI
+                delta = phi_prime - self._theta[i] + p_r[i] * PI
                 """
-                if i == 4:
-                    phi_prime = math.pow(-1, s[2])*self._phi[i] + s[1]*PI
+                if i == 2:
+                    phi_prime = math.pow(-1, s[1])*self._phi[i]
+                elif i == 3:
+                    phi_prime = math.pow(-1, s[0])*self._phi[i]
+                elif i == 4:
+                    phi_prime = s[0] * PI
                 elif i == 5:
-                    phi_prime = math.pow(-1, s[3])*self._phi[i] + s[0] * PI
+                    phi_prime = s[1] * PI
                 elif i == 6:
-                    phi_prime = s[2] * PI
+                    phi_prime = math.pow(-1, s[5])*self._phi[i] + s[2] * PI
                 elif i == 7:
-                    phi_prime = s[3] * PI
-                elif i == 8:
-                    phi_prime = math.pow(-1, s[7])*self._phi[i] + s[5] * PI
-                elif i == 9:
-                    phi_prime = math.pow(-1, s[6])*self._phi[i] + s[4] * PI
+                    phi_prime = math.pow(-1, s[4])*self._phi[i] + s[3] * PI
                 delta = phi_prime - self._theta[i] + p_r * PI
                 """
+            #print("Alice delta: ", delta)
             csocket.send_float(delta)
             csocket.send("delta sent")
             msg = yield from csocket.recv()
@@ -130,6 +129,10 @@ class ClientProgram(Program):
             assert msg == "qubit measured"
             m = yield from csocket.recv_int()
 
-            s.append(int(m))
+            s.append(int(m ^ self._r[i]))
 
-        return {"p": p}
+        measurement_outcome = ""
+        for i in self._output:
+            measurement_outcome += f"{s[i]}"
+
+        return {"measurement_outcome": measurement_outcome}

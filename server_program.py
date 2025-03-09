@@ -1,18 +1,15 @@
 from __future__ import annotations
 
-from pyexpat.errors import messages
 from typing import Any, Dict, Generator
 
 import networkx
 from netqasm.sdk.qubit import Qubit
-import numpy
 
 from netsquid.qubits.dmutil import dm_fidelity
 from netsquid.qubits import ketstates, ketutil
 
 from pydynaa import EventExpression
 
-from examples.advanced.ubqc.brickwork_state import fixed_graph_2_bit, fixed_graph_small
 from squidasm.sim.stack.csocket import ClassicalSocket
 from squidasm.sim.stack.program import Program, ProgramContext, ProgramMeta
 from squidasm.util.routines import recv_remote_state_preparation
@@ -23,11 +20,9 @@ class ServerProgram(Program):
     PEER = "client"
     def __init__(
             self,
-            corrections: dict,
             outputs: set,
             graph: networkx.Graph
     ):
-        self._corrections = corrections
         self._outputs = outputs
         self._graph = graph
     @property
@@ -47,14 +42,7 @@ class ServerProgram(Program):
         csocket: ClassicalSocket = context.csockets[self.PEER]
         self.use_callbacks = True
 
-        depth = yield from csocket.recv_int()
-        wires = yield from csocket.recv_int()
-        num_qubits = depth * wires
-
-        if depth < wires:
-            temp = wires
-            wires = depth
-            depth = temp
+        num_qubits = yield from csocket.recv_int()
 
         brickwork = [Qubit]
         measurement = []
@@ -64,9 +52,9 @@ class ServerProgram(Program):
 
         for i in range(num_qubits):
             if i == 0:
-                brickwork[0] = recv_remote_state_preparation(epr_socket)
+                brickwork[0] = epr_socket.recv_keep()[0]
             else:
-                brickwork.append(recv_remote_state_preparation(epr_socket))
+                brickwork.append(epr_socket.recv_keep()[0])
 
 
         yield from conn.flush()
@@ -108,4 +96,4 @@ class ServerProgram(Program):
         #print("Bob: ", measurement)
         #print(fidelity)
 
-        return {"measurement": measurement, "m8": measurement[8], "m9": measurement[9], "fidelity": fidelity}
+        return {"measurement": measurement, "m8": measurement[-2], "m9": measurement[-1], "fidelity": fidelity}
