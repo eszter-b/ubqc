@@ -9,7 +9,6 @@ from pydynaa import EventExpression
 
 from squidasm.sim.stack.csocket import ClassicalSocket
 from squidasm.sim.stack.program import Program, ProgramContext, ProgramMeta
-from squidasm.util.routines import remote_state_preparation
 
 
 PI = math.pi
@@ -66,9 +65,7 @@ class ClientProgram(Program):
         for i in range(self._num_qubits):
             if not (self._trap and self._dummy == i + 1):
                 q = epr_socket.create_keep()[0]
-                q.H()
                 q.rot_Z(angle=self._theta[i])
-                q.H()
                 p.append(q.measure())
             else:
                 q = epr_socket.create_keep()[0]
@@ -83,7 +80,7 @@ class ClientProgram(Program):
         for i in range(self._num_qubits):
 
             phi_prime = self._phi[i]
-            delta = phi_prime - self._theta[i] + p_r[i] * PI
+            delta = phi_prime + p_r[i] * PI #- self._theta[i]
 
             if not (self._trap and self._dummy == i + 1):
 
@@ -97,22 +94,8 @@ class ClientProgram(Program):
                     z = sum([s[i] for i in t_dependency])%2
                     phi_prime += z * PI
 
-                delta = phi_prime - self._theta[i] + p_r[i] * PI
-                """
-                if i == 2:
-                    phi_prime = math.pow(-1, s[1])*self._phi[i]
-                elif i == 3:
-                    phi_prime = math.pow(-1, s[0])*self._phi[i]
-                elif i == 4:
-                    phi_prime = s[0] * PI
-                elif i == 5:
-                    phi_prime = s[1] * PI
-                elif i == 6:
-                    phi_prime = math.pow(-1, s[5])*self._phi[i] + s[2] * PI
-                elif i == 7:
-                    phi_prime = math.pow(-1, s[4])*self._phi[i] + s[3] * PI
-                delta = phi_prime - self._theta[i] + p_r * PI
-                """
+                delta = phi_prime + p_r[i] * PI #- self._theta[i]
+
             #print("Alice delta: ", delta)
             csocket.send_float(delta)
             csocket.send("delta sent")

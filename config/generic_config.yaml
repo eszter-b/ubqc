@@ -3,8 +3,8 @@ qdevice_cfg: &qdevice_cfg
   num_qubits: 10
 
   # coherence times in ns(same for each qubit) min requirement
-  T1: 10_000_000_000_000_000
-  T2: 1_000_000_000_000_000
+  T1: 1e99  # Disabled amplitude dampening
+  T2: 1e90
 
   # gate execution times in ns
   init_time: 10_000

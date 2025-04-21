@@ -12,7 +12,6 @@ from pydynaa import EventExpression
 
 from squidasm.sim.stack.csocket import ClassicalSocket
 from squidasm.sim.stack.program import Program, ProgramContext, ProgramMeta
-from squidasm.util.routines import recv_remote_state_preparation
 from squidasm.util import get_qubit_state
 
 
@@ -20,10 +19,8 @@ class ServerProgram(Program):
     PEER = "client"
     def __init__(
             self,
-            outputs: set,
             graph: networkx.Graph
     ):
-        self._outputs = outputs
         self._graph = graph
     @property
     def meta(self) -> ProgramMeta:
@@ -49,7 +46,6 @@ class ServerProgram(Program):
         fidelity = []
 
         # Receive EPR Pairs
-
         for i in range(num_qubits):
             if i == 0:
                 brickwork[0] = epr_socket.recv_keep()[0]
@@ -73,7 +69,7 @@ class ServerProgram(Program):
             msg = yield from csocket.recv()
             assert msg == "delta sent"
             csocket.send("delta received")
-            #print("Bob: ", delta)
+
             brickwork[i].H()
             brickwork[i].rot_Z(angle=delta)
             brickwork[i].H()
@@ -83,6 +79,7 @@ class ServerProgram(Program):
             assert msg == "ping"
 
             epr_server = get_qubit_state(brickwork[i], "server")
+
             fidelity.append(float(
                 dm_fidelity(epr_server, ketutil.reduced_dm(ketstates.b00, [0]))
             ))
@@ -93,7 +90,5 @@ class ServerProgram(Program):
             csocket.send("qubit measured")
             measurement.append(int(m))
             csocket.send_int(measurement[i])
-        #print("Bob: ", measurement)
-        #print(fidelity)
 
         return {"measurement": measurement, "m8": measurement[-2], "m9": measurement[-1], "fidelity": fidelity}

@@ -1,5 +1,9 @@
 import numpy as np
 import random
+import matplotlib
+matplotlib.use('Qt5Agg')
+import matplotlib.pyplot as plt
+from scipy.optimize import curve_fit, fsolve
 
 from squidasm.run.stack.config import (
     GenericQDeviceConfig,
@@ -9,6 +13,7 @@ from squidasm.run.stack.config import (
 )
 
 PI = np.pi
+MIN_SUCCESS_RATE = 0.75
 
 
 def generate_random_angles(num_qubits, is_blind=False) -> list[float]:
@@ -74,6 +79,7 @@ def get_average(num_times, fs):
     avg = sum/num_times
     return avg
 
+
 def create_network(
     node_names: list[str] = None, link_noise: float = 0, qdevice_noise: float = 0
 ) -> StackNetworkConfig:
@@ -92,3 +98,58 @@ def create_network(
         stack1=node_names[0], stack2=node_names[1]
     )
     return StackNetworkConfig(stacks=stacks, links=[link])
+
+
+def print_results_default(success_rate, num_times, tagged_state):
+    print("Number of runs:", num_times)
+    print(f"Number of |{tagged_state}> outcomes:", int(success_rate*num_times))
+    print("Success rate:", success_rate)
+
+
+def exp_func(x, a, b, c):
+    return a * np.exp(b * x) + c
+
+
+def linear_func(x, m, c):
+    return m * x + c
+
+
+def find_x_for_y(func, params, y_target, x0):
+    x_target, = fsolve(lambda x: func(x, *params) - y_target, x0)
+    return x_target
+
+
+def fit_curve(results: list, x: np.ndarray, xlabel: str, title: str, model: callable=exp_func, show: bool=False) -> None:
+
+    if model is not exp_func:
+        model = linear_func
+
+    params, covariance = curve_fit(model, x, results)
+
+    # Generate x-values for a smooth curve
+    x_fit = np.linspace(x[0], x[-1], 100)
+    y_fit = model(x_fit, *params)
+    x0 = (x[0] + x[-1]) / 2
+    x_target = find_x_for_y(model, params, MIN_SUCCESS_RATE, x0)
+
+    print("x value for y = {:.2f} is {:.4f}".format(MIN_SUCCESS_RATE, x_target))
+
+    # Plot the original data and the fitted curve
+    plt.scatter(x, results, label='Measurement results')
+    plt.plot(x_fit, y_fit, label='Fitted Curve', color='red')
+
+    # Plot horizontal and vertical lines at y_target and x_target
+    plt.axhline(y=MIN_SUCCESS_RATE, color='gray', linestyle='--', label=f'y = {MIN_SUCCESS_RATE}')
+    plt.axvline(x=x_target, color='purple', linestyle='--', label=f'x ≈ {x_target:.4f}')
+
+    # Highlight the point on the fitted curve
+    plt.scatter(x_target, MIN_SUCCESS_RATE, color='green', zorder=5, label='Target Point')
+
+    plt.xlabel(xlabel)
+    plt.ylabel('Success rate')
+    plt.legend()
+    if show:
+        plt.show()
+    else:
+        plt.savefig(f"measurement_results/{title}_vs_success.png")
+
