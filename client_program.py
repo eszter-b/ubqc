@@ -80,7 +80,7 @@ class ClientProgram(Program):
         for i in range(self._num_qubits):
 
             phi_prime = self._phi[i]
-            delta = phi_prime + p_r[i] * PI #- self._theta[i]
+            delta = phi_prime + p_r[i] * PI
 
             if not (self._trap and self._dummy == i + 1):
 
@@ -94,9 +94,8 @@ class ClientProgram(Program):
                     z = sum([s[i] for i in t_dependency])%2
                     phi_prime += z * PI
 
-                delta = phi_prime + p_r[i] * PI #- self._theta[i]
+                delta = phi_prime + p_r[i] * PI
 
-            #print("Alice delta: ", delta)
             csocket.send_float(delta)
             csocket.send("delta sent")
             msg = yield from csocket.recv()
