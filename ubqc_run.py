@@ -9,7 +9,7 @@ from networkx import Graph
 import numpy as np
 import netsquid as ns
 
-from examples.advanced.ubqc.util import linear_func
+from examples.advanced.ubqc.util import linear_func, log_func
 from squidasm.run.stack.run import run
 from squidasm.sim.stack.common import LogManager
 from client_program import ClientProgram
@@ -68,7 +68,6 @@ def success_rate(
         plt.xlabel("Final Measurement Outcomes")
         plt.ylabel("Frequency")
         plt.title(f"Outcome Distribution for Grover’s Amplified State |{tagged_state}>")
-        plt.grid()
         plt.savefig(f"measurement_results/outcomes{tagged_state}.png")
 
     return success
@@ -217,11 +216,7 @@ def channel_fidelity_sweep(
     link_fidelity_list = np.arange(0.75, 1.0, step=0.01)
 
     results = []
-    link_config = cfg.links
-    if link_type == "heralded":
-        link_config = HeraldedLinkConfig.from_file("depolarise_link_config.yaml")
-    elif link_type == "depolarise":
-        link_config = DepolariseLinkConfig.from_file("depolarise_link_config.yaml")
+    link_config = DepolariseLinkConfig.from_file("config/depolarise_link_config.yaml")
     link = LinkConfig(stack1="client", stack2="server", typ="depolarise", cfg=link_config)
 
     # Replace link from YAML file with new depolarise link
@@ -254,42 +249,39 @@ def channel_fidelity_sweep(
     util.fit_curve(results, link_fidelity_list, xlabel, f"{link_type}_link_fidelity")
 
 
-def channel_prob_of_entanglement_sweep(
+def channel_length_sweep(
         cfg: StackNetworkConfig,
         graph: Graph,
         dependency: dict,
         phi: list,
         theta: list,
         r: list,
-        num_times: int = 1,
-        link_type: str = 'depolarise',
+        channel_length: np.ndarray | None,
+        num_times: int = 100,
         **_kwargs
 ) -> None:
 
-    prob_of_entanglement_list = np.arange(0.5, 1, step=0.005)
+    if channel_length is None:
+        channel_length = np.arange(0, 200, step=1)
 
     results = []
-    link_config = cfg.links
-    if link_type == "heralded":
-        link_config = HeraldedLinkConfig.from_file("depolarise_link_config.yaml")
-    elif link_type == "depolarise":
-        link_config = DepolariseLinkConfig.from_file("depolarise_link_config.yaml")
-    link = LinkConfig(stack1="client", stack2="server", typ="depolarise", cfg=link_config)
+    link_config = HeraldedLinkConfig.from_file("config/heralded_link_config.yaml")
+
+    link = LinkConfig(stack1="client", stack2="server", typ="heralded", cfg=link_config)
 
     # Replace link from YAML file with new depolarise link
     cfg.links = [link]
     channel_type = cfg.links[0].typ
     print(channel_type)
 
-    for prob_of_entanglement in prob_of_entanglement_list:
-        link_config.length = prob_of_entanglement
+    for distance in channel_length:
+        link_config.length = distance
 
         print(cfg.links[0].cfg)
 
         success = success_rate(
             cfg=cfg,
             num_times=num_times,
-            tagged_state=tagged_state,
             phi=phi,
             dependency=dependency,
             graph=graph,
@@ -300,9 +292,8 @@ def channel_prob_of_entanglement_sweep(
 
         results.append(success)
 
-    xlabel = f"Probability of successful entanglement of the {channel_type} quantum channel"
-
-    util.fit_curve(results=results, x=prob_of_entanglement_list, xlabel=xlabel, title=f"{link_type}_link_", show=True)
+    xlabel = f"Length of the {channel_type} quantum channel [km]"
+    util.fit_curve(results, channel_length, xlabel, f"heralded_link_", log_func)
 
 
 if __name__ == "__main__":

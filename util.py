@@ -113,6 +113,9 @@ def exp_func(x, a, b, c):
 def linear_func(x, m, c):
     return m * x + c
 
+def log_func(x, A, L, k, x0):
+    return A - (L / (1 + np.exp(-k * (x - x0))))
+
 
 def find_x_for_y(func, params, y_target, x0):
     x_target, = fsolve(lambda x: func(x, *params) - y_target, x0)
@@ -120,9 +123,6 @@ def find_x_for_y(func, params, y_target, x0):
 
 
 def fit_curve(results: list, x: np.ndarray, xlabel: str, title: str, model: callable=exp_func, show: bool=False) -> None:
-
-    if model is not exp_func:
-        model = linear_func
 
     params, covariance = curve_fit(model, x, results)
 

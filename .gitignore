@@ -1,0 +1,8 @@
+__pycache__/
+
+.evn/
+.venv/
+venv/
+
+/measurement_results/
+*.png

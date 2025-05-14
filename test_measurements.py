@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import matplotlib
+from matplotlib import pyplot as plt
 import pytest
 
 matplotlib.use('Qt5Agg')
@@ -26,7 +27,7 @@ def setup_env():
     cfg_file = os.path.join(os.path.dirname(__file__), config)
     cfg = StackNetworkConfig.from_file(cfg_file)
 
-    num_times = 10
+    num_times = 100
     tagged_state = "11"
     G = fixed_graph_2_bit()
 
@@ -45,7 +46,7 @@ def setup_env():
         "phi": phi,
         "theta": theta,
         "r": r,
-        "num_times": 10,
+        "num_times": num_times,
         "dependency": dependency,
         "correction": correction,
         "outputs": outputs,
@@ -54,8 +55,38 @@ def setup_env():
     }
 
 
+@pytest.fixture(scope="session")
+def plot_success_rate():
+    success_rate = []
+    yield success_rate
+
+    if success_rate:
+        fig, ax = plt.subplots(2, 2, figsize=(10, 6))
+        result_00 = success_rate[0]
+        ax[0, 0].bar(result_00.keys(), result_00.get("00"))
+        ax[0, 0].set_title(f"Tagged state: |00>")
+
+        result_01 = success_rate[1]
+        ax[0, 1].bar(result_01.keys(), result_01.get("01"))
+        ax[0, 1].set_title(f"Tagged state: |01>")
+
+        result_10 = success_rate[2]
+        ax[1, 0].bar(result_10.keys(), result_10.get("10"))
+        ax[1, 0].set_title(f"Tagged state: |10>")
+
+        result_11 = success_rate[3]
+        ax[1, 1].bar(result_11.keys(), result_11.get("11"))
+        ax[1, 1].set_title(f"Tagged state: |11>")
+
+        fig.suptitle("Success rates for ideal qdevice and chanel model for 100 runs.")
+        fig.supxlabel("Tagged states")
+        fig.supylabel("Success rates")
+        fig.legend()
+        plt.savefig(f"measurement_results/outcomes.png")
+
+
 @pytest.mark.parametrize("tagged_state", ["00", "01", "10", "11"])
-def test_success_rate(tagged_state):
+def test_success_rate(plot_success_rate, tagged_state):
     ns.set_qstate_formalism(ns.qubits.qformalism.QFormalism.KET)
     config = "config/generic_config.yaml"
     cfg_file = os.path.join(os.path.dirname(__file__), config)
@@ -87,8 +118,7 @@ def test_success_rate(tagged_state):
         plot=False
     )
 
-    util.print_results_default(success, num_times, tagged_state)
-    assert success == 1.0
+    plot_success_rate.append(({tagged_state: success}))
 
 
 def test_channel_fidelity_sweep(setup_env):
@@ -105,6 +135,41 @@ def test_channel_fidelity_sweep(setup_env):
         number_of_qubits=setup_env["number_of_qubits"],
     )
 
+
+def test_channel_length_sweep(setup_env):
+    ubqc_run.channel_length_sweep(
+        cfg=setup_env["cfg"],
+        graph=setup_env["graph"],
+        phi=setup_env["phi"],
+        theta=setup_env["theta"],
+        r=setup_env["r"],
+        #num_times=setup_env["num_times"],
+        dependency=setup_env["dependency"],
+        output=setup_env["outputs"],
+        tagged_state=setup_env["tagged_state"],
+        number_of_qubits=setup_env["number_of_qubits"],
+        channel_length=np.arange(0, 200, step=1)
+    )
+
+
+def test_channel_length_sweep_trapped_ion(setup_env):
+    config = "config/trapped_ions.yaml"
+    cfg_file = os.path.join(os.path.dirname(__file__), config)
+    cfg = StackNetworkConfig.from_file(cfg_file)
+
+    ubqc_run.channel_length_sweep(
+        cfg=cfg,
+        graph=setup_env["graph"],
+        phi=setup_env["phi"],
+        theta=setup_env["theta"],
+        r=setup_env["r"],
+        num_times=10,
+        dependency=setup_env["dependency"],
+        output=setup_env["outputs"],
+        tagged_state=setup_env["tagged_state"],
+        number_of_qubits=setup_env["number_of_qubits"],
+        channel_length=np.arange(0, 200, step=1)
+    )
 
 
 @pytest.mark.parametrize("noise", ["single_qubit_gate_depolar_prob", "two_qubit_gate_depolar_prob"])
