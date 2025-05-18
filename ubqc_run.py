@@ -83,14 +83,17 @@ def coherence_time_sweep(
     coherence_times: np.ndarray,
     num_times: int = 50,
     mode: str = 'T1',
-    node: dict = {1: 'server'},
-    **_kwargs
+    node: tuple = (1, 'server'),
+    **kwargs
 ) -> None:
 
     if coherence_times is None:
         coherence_times = np.logspace(start=1, stop=10, num=50, base=10, dtype=int)
 
-    node_key = list(map(int, node.keys()))[0]
+    node_key = node[0]
+    if node[1] != cfg.stacks[node_key].name:
+        return
+    node_name = cfg.stacks[node_key].name
 
     results = []
     print(cfg.stacks[node_key].name)
@@ -102,7 +105,7 @@ def coherence_time_sweep(
             print(f"T1: {cfg.stacks[node_key].qdevice_cfg['T1']}    T2: {cfg.stacks[node_key].qdevice_cfg['T2']}")
         else:
             cfg.stacks[node_key].qdevice_cfg['T2'] = coherence
-            cfg.stacks[node_key].qdevice_cfg['T1'] = 9*1e6
+            cfg.stacks[node_key].qdevice_cfg['T1'] = 1e99
             print(cfg.stacks[node_key].qdevice_cfg['T2'])
 
         success = success_rate(
@@ -113,18 +116,19 @@ def coherence_time_sweep(
             graph=graph,
             r=r,
             theta=theta,
-            **_kwargs
+            **kwargs
         )
         results.append(success)
 
     plt.plot(coherence_times, results)
     plt.xscale('log', base=10)
-    xlabel = "Longitudinal relaxation time [ns]"
+    xlabel = f"Longitudinal relaxation time for {node_name} [ns]"
     if mode == 'T2':
-        xlabel = "Transverse relaxation time [ns]"
+        xlabel = f"Transverse relaxation time for {node_name} [ns]"
 
     coherence_times = np.array(coherence_times)
     results = np.array(results)
+
     y = 0.75
     x_cross = []
     crossings = np.where(np.diff(np.sign(results - y)))[0]
@@ -147,7 +151,7 @@ def coherence_time_sweep(
     plt.ylabel("Success rate")
     plt.grid()
     plt.legend()
-    plt.savefig(f"measurement_results/{cfg.stacks[node_key].name}_{mode}_vs_success.png")
+    plt.savefig(f"measurement_results/{node_name}_{mode}_vs_success.png")
 
 
 
@@ -160,14 +164,17 @@ def noise_model_sweep(
         r: list,
         num_times: int = 100,
         noise: str = 'single_qubit_gate_depolar_prob',
-        node: dict = {1: 'server'},
-        **_kwargs
+        node: tuple = (1, 'server'),
+        noise_prob: np.ndarray= None,
+        **kwargs
 ) -> None:
 
-    noise_prob = np.arange(start=0.0, stop=0.05, step=0.001)
+    if noise_prob is None:
+        noise_prob = np.arange(start=0.0, stop=0.05, step=0.001)
 
     results = []
-    node_key = list(map(int, node.keys()))[0]
+    node_key = node[0]
+    node_name = node[1]
     print(cfg.stacks[node_key])
 
     for n in noise_prob:
@@ -182,22 +189,20 @@ def noise_model_sweep(
         success = success_rate(
             cfg=cfg,
             num_times=num_times,
-            number_of_qubits=number_of_qubits,
-            tagged_state=tagged_state,
             phi=phi,
             dependency=dependency,
             graph=graph,
             r=r,
             theta=theta,
-            **_kwargs
+            **kwargs
         )
 
         results.append(success)
 
-    xlabel = f"Single qubit gate depolarisation probability for {node.get(node_key)}"
+    xlabel = f"Single qubit gate depolarisation probability for {node_name}"
     if noise == 'two_qubit_gate_depolar_prob':
-        xlabel = f"Two qubit gate depolarisation probability for {node.get(node_key)}"
-    title = f"{node.get(node_key)}_{noise}"
+        xlabel = f"Two qubit gate depolarisation probability for {node_name}"
+    title = f"{node_key}_{noise}"
     util.fit_curve(results, noise_prob, xlabel, title, linear_func)
 
 
@@ -210,7 +215,7 @@ def channel_fidelity_sweep(
         r: list,
         num_times: int = 1,
         link_type: str = 'depolarise',
-        **_kwargs
+        **kwargs
 ) -> None:
 
     link_fidelity_list = np.arange(0.75, 1.0, step=0.01)
@@ -232,14 +237,12 @@ def channel_fidelity_sweep(
         success = success_rate(
             cfg=cfg,
             num_times=num_times,
-            number_of_qubits=number_of_qubits,
-            tagged_state=tagged_state,
             phi=phi,
             dependency=dependency,
             graph=graph,
             r=r,
             theta=theta,
-            **_kwargs
+            **kwargs
         )
 
         results.append(success)
@@ -258,7 +261,7 @@ def channel_length_sweep(
         r: list,
         channel_length: np.ndarray | None,
         num_times: int = 100,
-        **_kwargs
+        **kwargs
 ) -> None:
 
     if channel_length is None:
@@ -287,7 +290,7 @@ def channel_length_sweep(
             graph=graph,
             r=r,
             theta=theta,
-            **_kwargs
+            **kwargs
         )
 
         results.append(success)

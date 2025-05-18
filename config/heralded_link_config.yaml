@@ -3,6 +3,6 @@ p_loss_init: 0.889 #  probability  1 - 0.111
 p_loss_length: 0.25  # dB/km
 speed_of_light: 214_000  # km/s
 dark_count_probability: 1.4e-5  #  probability
-detector_efficiency: 0.98  #  TODO: mi a realis
+detector_efficiency: 0.98
 visibility: 0.89
 num_resolving: False
