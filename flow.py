@@ -1,13 +1,13 @@
 import graphix
 from networkx import Graph
 from graphix.command import CommandKind
-from brickwork_state import fixed_graph_2_bit
+import graph_state
 import numpy as np
 
 
 PI = np.pi
 
-def get_dependencies(graph: Graph, angles: list, inputs: set, outputs: set):
+def get_dependencies(graph: Graph, angles: list, inputs: set, outputs: set, draw_pattern: bool = False):
     meas_angles = {}
     for i in range(len(angles)):
         meas_angles.update({i: angles[i]})
@@ -16,6 +16,8 @@ def get_dependencies(graph: Graph, angles: list, inputs: set, outputs: set):
 
     pattern.standardize()
     pattern.shift_signals()
+    if draw_pattern:
+        pattern.draw_graph(flow_from_pattern=False, show_measurement_planes=False, show_local_clifford=True)
 
     dependency_set = {}
     correction_set = {}
@@ -39,12 +41,11 @@ def get_dependencies(graph: Graph, angles: list, inputs: set, outputs: set):
 
 
 if __name__ == "__main__":
-    G = fixed_graph_2_bit()
-    phi = [0.0, 0.0, 0.0, 0.0, PI, PI, 0.0, 0.0, PI, PI]
+    G, inputs, outputs = graph_state.deutsch_jozsa()
+    #phi = [0.0, 0.0, 0.0, 0.0, PI, PI, 0.0, 0.0, PI, PI]
+    phi = [0.0 for i in range(G.number_of_nodes())]
+    print(phi)
 
-    inputs = {0, 1}
-    outputs = {8, 9}
-
-    dependency, correction = get_dependencies(G, phi, inputs, outputs)
+    dependency, correction = get_dependencies(G, phi, inputs, outputs, True)
     print(dependency)
     print(correction)

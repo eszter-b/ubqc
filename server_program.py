@@ -91,4 +91,4 @@ class ServerProgram(Program):
             measurement.append(int(m))
             csocket.send_int(measurement[i])
 
-        return {"measurement": measurement, "m8": measurement[-2], "m9": measurement[-1], "fidelity": fidelity}
+        return {"measurement": measurement, "fidelity": fidelity}

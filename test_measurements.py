@@ -12,7 +12,7 @@ from squidasm.sim.stack.common import LogManager
 from squidasm.run.stack.config import StackNetworkConfig
 
 from flow import get_dependencies
-from brickwork_state import fixed_graph_2_bit
+import graph_state
 import ubqc_run
 import util
 import numpy as np
@@ -29,15 +29,13 @@ def setup_env():
 
     num_times = 100
     tagged_state = "11"
-    G = fixed_graph_2_bit()
+    G, inputs, outputs = graph_state.grover_4_element()
 
     number_of_qubits = len(G.nodes)
     phi = util.get_phi_values(tagged_state)
     theta = util.generate_random_angles(num_qubits=number_of_qubits, is_blind=True)
     r = util.generate_random_key(num_qubits=number_of_qubits, is_blind=True)
 
-    inputs = {0, 1}
-    outputs = {8, 9}
     dependency, correction = get_dependencies(G, phi, inputs, outputs)
 
     return {
@@ -85,6 +83,78 @@ def plot_success_rate():
         plt.savefig(f"measurement_results/outcomes.png")
 
 
+def test_graph_state():
+    ns.set_qstate_formalism(ns.qubits.qformalism.QFormalism.KET)
+    config = "config/generic_config.yaml"
+    cfg_file = os.path.join(os.path.dirname(__file__), config)
+    cfg = StackNetworkConfig.from_file(cfg_file)
+
+    num_times = 1
+    G, inputs, outputs = graph_state.brickwork(3,5)
+    tagged_state = '000'
+
+    number_of_qubits = len(G.nodes)
+    phi = [0.0 for i in range(G.number_of_nodes())]
+    theta = util.generate_random_angles(num_qubits=number_of_qubits, is_blind=True)
+    r = util.generate_random_key(num_qubits=number_of_qubits, is_blind=True)
+
+    dependency, correction = get_dependencies(G, phi, inputs, outputs)
+    success = ubqc_run.success_rate(
+        cfg=cfg,
+        num_times=num_times,
+        number_of_qubits=number_of_qubits,
+        tagged_state=tagged_state,
+        phi=phi,
+        dependency=dependency,
+        graph=G,
+        outputs=outputs,
+        r=r,
+        theta=theta,
+        output=outputs,
+        plot=False
+    )
+    util.print_results_default(success, num_times, tagged_state)
+    assert success == 1
+
+
+def test_deutsch_jozsa_balanced():
+    """For a balanced function the expected success rate is 0.5"""
+
+    ns.set_qstate_formalism(ns.qubits.qformalism.QFormalism.KET)
+    config = "config/generic_config.yaml"
+    cfg_file = os.path.join(os.path.dirname(__file__), config)
+    cfg = StackNetworkConfig.from_file(cfg_file)
+
+    num_times = 250
+    G, inputs, outputs = graph_state.deutsch_jozsa()
+    tagged_state = '1'
+
+    number_of_qubits = len(G.nodes)
+    phi = [0.0, np.pi/2, np.pi, 0.0]
+    theta = util.generate_random_angles(num_qubits=number_of_qubits, is_blind=True)
+    theta[0] = 0.0
+    theta[-1] = 0.0
+    r = util.generate_random_key(num_qubits=number_of_qubits, is_blind=True)
+
+    dependency, correction = get_dependencies(G, phi, inputs, outputs)
+    success = ubqc_run.success_rate(
+        cfg=cfg,
+        num_times=num_times,
+        number_of_qubits=number_of_qubits,
+        tagged_state=tagged_state,
+        phi=phi,
+        dependency=dependency,
+        graph=G,
+        outputs=outputs,
+        r=r,
+        theta=theta,
+        output=outputs,
+        plot=False
+    )
+    util.print_results_default(success, num_times, tagged_state)
+    assert success == pytest.approx(0.5, 1e-1)
+
+
 @pytest.mark.parametrize("tagged_state", ["00", "01", "10", "11"])
 def test_success_rate(plot_success_rate, tagged_state):
     ns.set_qstate_formalism(ns.qubits.qformalism.QFormalism.KET)
@@ -93,15 +163,13 @@ def test_success_rate(plot_success_rate, tagged_state):
     cfg = StackNetworkConfig.from_file(cfg_file)
 
     num_times = 100
-    G = fixed_graph_2_bit()
+    G, inputs, outputs = graph_state.grover_4_element()
 
     number_of_qubits = len(G.nodes)
     phi = util.get_phi_values(tagged_state)
     theta = util.generate_random_angles(num_qubits=number_of_qubits, is_blind=True)
     r = util.generate_random_key(num_qubits=number_of_qubits, is_blind=True)
 
-    inputs = {0, 1}
-    outputs = {8, 9}
     dependency, correction = get_dependencies(G, phi, inputs, outputs)
     success = ubqc_run.success_rate(
         cfg=cfg,
@@ -143,7 +211,7 @@ def test_channel_length_sweep(setup_env):
         phi=setup_env["phi"],
         theta=setup_env["theta"],
         r=setup_env["r"],
-        #num_times=setup_env["num_times"],
+        num_times=10,
         dependency=setup_env["dependency"],
         output=setup_env["outputs"],
         tagged_state=setup_env["tagged_state"],
@@ -163,7 +231,7 @@ def test_channel_length_sweep_trapped_ion(setup_env):
         phi=setup_env["phi"],
         theta=setup_env["theta"],
         r=setup_env["r"],
-        num_times=10,
+        num_times=100,
         dependency=setup_env["dependency"],
         output=setup_env["outputs"],
         tagged_state=setup_env["tagged_state"],
@@ -189,6 +257,24 @@ def test_noise_sweep(setup_env, noise):
     )
 
 
+def test_noise_sweep_client(setup_env):
+    ubqc_run.noise_model_sweep(
+        cfg=setup_env["cfg"],
+        graph=setup_env["graph"],
+        phi=setup_env["phi"],
+        theta=setup_env["theta"],
+        r=setup_env["r"],
+        noise="two_qubit_gate_depolar_prob",
+        dependency=setup_env["dependency"],
+        output=setup_env["outputs"],
+        tagged_state=setup_env["tagged_state"],
+        number_of_qubits=setup_env["number_of_qubits"],
+        node=(0, 'client'),
+        noise_prob=np.arange(start=0.0, stop=1.0, step=0.05),
+        num_times=100
+    )
+
+
 def test_coherence_T1_sweep(setup_env):
     ubqc_run.coherence_time_sweep(
         cfg=setup_env["cfg"],
@@ -205,6 +291,24 @@ def test_coherence_T1_sweep(setup_env):
         num_times=100
     )
 
+
+def test_coherence_T2_sweep(setup_env):
+    ubqc_run.coherence_time_sweep(
+        cfg=setup_env["cfg"],
+        graph=setup_env["graph"],
+        phi=setup_env["phi"],
+        theta=setup_env["theta"],
+        r=setup_env["r"],
+        dependency=setup_env["dependency"],
+        coherence_times=np.logspace(start=1, stop=10, num=50, base=10, dtype=int),
+        mode='T2',
+        output=setup_env["outputs"],
+        tagged_state=setup_env["tagged_state"],
+        number_of_qubits=setup_env["number_of_qubits"],
+        num_times=10
+    )
+
+
 def test_coherence_client_sweep(setup_env):
     ubqc_run.coherence_time_sweep(
         cfg=setup_env["cfg"],
@@ -214,10 +318,10 @@ def test_coherence_client_sweep(setup_env):
         r=setup_env["r"],
         dependency=setup_env["dependency"],
         coherence_times=np.logspace(start=-3, stop=6, num=25, base=10, dtype=float),
-        mode='T2',
+        mode='T1',
         output=setup_env["outputs"],
         tagged_state=setup_env["tagged_state"],
         number_of_qubits=setup_env["number_of_qubits"],
-        node={1: 'server'},
+        node=(0, 'client'),
         num_times=10
     )

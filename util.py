@@ -135,7 +135,7 @@ def fit_curve(results: list, x: np.ndarray, xlabel: str, title: str, model: call
     print("x value for y = {:.2f} is {:.4f}".format(MIN_SUCCESS_RATE, x_target))
 
     # Plot the original data and the fitted curve
-    plt.scatter(x, results, label='Measurement results')
+    plt.plot(x, results, label='Measurement results')
     plt.plot(x_fit, y_fit, label='Fitted Curve', color='red')
 
     # Plot horizontal and vertical lines at y_target and x_target

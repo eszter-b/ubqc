@@ -25,7 +25,6 @@ class ClientProgram(Program):
             dummy: int,
             theta: list,
             r: list,
-            tagged_state: str,
             dependencies: dict,
             graph: networkx.Graph,
             output: set
@@ -36,7 +35,6 @@ class ClientProgram(Program):
         self._dummy = dummy
         self._theta = theta
         self._r = r
-        self._tagged_state = tagged_state
         self._dependencies = dependencies
         self._graph = graph
         self._output = output

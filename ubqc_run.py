@@ -17,7 +17,7 @@ from server_program import ServerProgram
 from squidasm.run.stack.config import StackNetworkConfig, DepolariseLinkConfig, LinkConfig, HeraldedLinkConfig
 
 from flow import get_dependencies
-from brickwork_state import fixed_graph_2_bit
+import graph_state
 import util
 
 
@@ -48,7 +48,6 @@ def success_rate(
         dummy=0,
         theta=theta,
         r=r,
-        tagged_state=tagged_state,
         dependencies=dependency,
         graph=graph,
         output=output
@@ -308,15 +307,13 @@ if __name__ == "__main__":
 
     num_times = 100
     tagged_state = "11"
-    G = fixed_graph_2_bit()
+    G, inputs, outputs = graph_state.grover_4_element()
 
     number_of_qubits = len(G.nodes)
     phi = util.get_phi_values(tagged_state)
     theta = util.generate_random_angles(num_qubits=number_of_qubits, is_blind=True)
     r = util.generate_random_key(num_qubits=number_of_qubits, is_blind=True)
 
-    inputs = {0, 1}
-    outputs = {8, 9}
     dependency, correction = get_dependencies(G, phi, inputs, outputs)
 
     success = success_rate(
